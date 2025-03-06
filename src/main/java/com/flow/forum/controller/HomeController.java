@@ -2,6 +2,7 @@ package com.flow.forum.controller;
 
 
 import com.flow.forum.entity.DiscussPost;
+import com.flow.forum.entity.Page;
 import com.flow.forum.entity.User;
 import com.flow.forum.service.DiscussPostService;
 import com.flow.forum.service.UserService;
@@ -25,8 +26,11 @@ public class HomeController {
     private UserService userService;
 
     @RequestMapping(path = "/index", method = RequestMethod.GET)
-    public String getIndexPage(Model model) {
-        List<DiscussPost> list = discussPostService.findDiscussPosts(0, 0, 10);
+    public String getIndexPage(Model model, Page page) {
+        //after the method is called, springmvc will automatically instantiate  model and page, and inject them into Model. Therefore, we can directly access the data in thymeleaf.
+        page.setRows(discussPostService.findDiscussPostRows(0));
+        page.setPath("/index");
+        List<DiscussPost> list = discussPostService.findDiscussPosts(0, page.getOffset(), page.getLimit());
         List<Map<String, Object>> discussPosts = new ArrayList<>();
         if (list != null) {
             for (DiscussPost post : list) {
