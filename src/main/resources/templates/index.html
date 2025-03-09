@@ -48,7 +48,7 @@
                             <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                                 <a class="dropdown-item text-center" href="site/profile.html">Profile</a>
                                 <a class="dropdown-item text-center" href="site/setting.html">Setting</a>
-                                <a class="dropdown-item text-center" href="site/login.html">Log out</a>
+                                <a class="dropdown-item text-center" th:href="@{/logout}">Log out</a>
                                 <div class="dropdown-divider"></div>
                                 <span class="dropdown-item text-center text-secondary">nowcoder</span>
                             </div>
@@ -181,12 +181,12 @@
     <footer class="bg-dark" th:fragment="footer">
         <div class="container">
             <div class="row">
-                <!-- 二维码 -->
+
                 <div class="col-4 qrcode">
                     <img src="https://uploadfiles.nowcoder.com/app/app_download.png" class="img-thumbnail"
                          style="width:136px;"/>
                 </div>
-                <!-- 公司信息 -->
+
                 <div class="col-8 detail-info">
                     <div class="row">
                         <div class="col">
@@ -222,12 +222,14 @@
                                     Company Address: 799 Alfred Street, QLD 4000, Australia
                                 </li>
                                 <li class="nav-item text-white-50">
-                                    Contact: 0459987654 (telephone) flow@outlook.com
+                                    Contact: 0459987654  flow@outlook.com
                                 </li>
                                 <li class="nav-item text-white-50">
-                                    FlowTech©2018 All rights reserved
+                                    FlowTech©2024 All rights reserved
                                 </li>
-
+                                <li class="nav-item text-white-50">
+                                    We hope you are happy every day.
+                                </li>
                             </ul>
                         </div>
                     </div>

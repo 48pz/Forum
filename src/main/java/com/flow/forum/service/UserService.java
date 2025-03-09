@@ -1,6 +1,8 @@
 package com.flow.forum.service;
 
+import com.flow.forum.dao.LoginTicketMapper;
 import com.flow.forum.dao.UserMapper;
+import com.flow.forum.entity.LoginTicket;
 import com.flow.forum.entity.User;
 import com.flow.forum.util.ForumConstant;
 import com.flow.forum.util.ForumUtil;
@@ -37,6 +39,9 @@ public class UserService implements ForumConstant {
     public User findUserById(int id) {
         return userMapper.selectById(id);
     }
+
+    @Autowired
+    private LoginTicketMapper loginTicketMapper;
 
     public Map<String, Object> register(User user) {
         Map<String, Object> map = new HashMap<>();
@@ -109,4 +114,51 @@ public class UserService implements ForumConstant {
             return ACTIVATION_FAILURE;
         }
     }
+
+    public Map<String,Object> login(String username,String password, int expiredSec){
+        Map<String,Object> map = new HashMap<>();
+
+        if (StringUtils.isBlank(username)){
+            map.put("usernameMsg","Username cannot be empty");
+            return map;
+        }
+
+        if (StringUtils.isBlank(password)){
+            map.put("passwordMsg","Password cannot be empty");
+            return map;
+        }
+
+        //verify account
+        User user = userMapper.selectByName(username);
+        if (user == null){
+            map.put("usernameMsg","This account does not exist");
+            return map;
+        }
+
+        if(user.getStatus() == 0){
+            map.put("usernameMsg","This account has not been activated");
+            return map;
+        }
+
+        password = ForumUtil.md5(password +user.getSalt());
+        if(!user.getPassword().equals(password)){
+            map.put("passwordMsg","Password is incorrect");
+            return map;
+        }
+
+        //generate login ticket
+        LoginTicket loginTicket = new LoginTicket();
+        loginTicket.setUserId(user.getId());
+        loginTicket.setTicket(ForumUtil.generateUUID());
+        loginTicket.setStatus(0);
+        loginTicket.setExpired(new Date(System.currentTimeMillis() + expiredSec* 1000L));
+        loginTicketMapper.insertLoginTicket(loginTicket);
+        map.put("ticket",loginTicket.getTicket());
+        return map;
+    }
+
+    public void logout(String ticket){
+        loginTicketMapper.updateStatus(ticket,1);
+    }
+
 }

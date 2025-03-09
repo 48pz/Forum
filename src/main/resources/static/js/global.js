@@ -1,4 +1,4 @@
-var CONTEXT_PATH = ""
+var CONTEXT_PATH = "/forum"
 
 window.alert = function(message) {
 	if(!$(".alert-box").length) {
