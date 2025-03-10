@@ -40,6 +40,7 @@ public class UserService implements ForumConstant {
         return userMapper.selectById(id);
     }
 
+
     @Autowired
     private LoginTicketMapper loginTicketMapper;
 
@@ -115,34 +116,34 @@ public class UserService implements ForumConstant {
         }
     }
 
-    public Map<String,Object> login(String username,String password, int expiredSec){
-        Map<String,Object> map = new HashMap<>();
+    public Map<String, Object> login(String username, String password, int expiredSec) {
+        Map<String, Object> map = new HashMap<>();
 
-        if (StringUtils.isBlank(username)){
-            map.put("usernameMsg","Username cannot be empty");
+        if (StringUtils.isBlank(username)) {
+            map.put("usernameMsg", "Username cannot be empty");
             return map;
         }
 
-        if (StringUtils.isBlank(password)){
-            map.put("passwordMsg","Password cannot be empty");
+        if (StringUtils.isBlank(password)) {
+            map.put("passwordMsg", "Password cannot be empty");
             return map;
         }
 
         //verify account
         User user = userMapper.selectByName(username);
-        if (user == null){
-            map.put("usernameMsg","This account does not exist");
+        if (user == null) {
+            map.put("usernameMsg", "This account does not exist");
             return map;
         }
 
-        if(user.getStatus() == 0){
-            map.put("usernameMsg","This account has not been activated");
+        if (user.getStatus() == 0) {
+            map.put("usernameMsg", "This account has not been activated");
             return map;
         }
 
-        password = ForumUtil.md5(password +user.getSalt());
-        if(!user.getPassword().equals(password)){
-            map.put("passwordMsg","Password is incorrect");
+        password = ForumUtil.md5(password + user.getSalt());
+        if (!user.getPassword().equals(password)) {
+            map.put("passwordMsg", "Password is incorrect");
             return map;
         }
 
@@ -151,14 +152,52 @@ public class UserService implements ForumConstant {
         loginTicket.setUserId(user.getId());
         loginTicket.setTicket(ForumUtil.generateUUID());
         loginTicket.setStatus(0);
-        loginTicket.setExpired(new Date(System.currentTimeMillis() + expiredSec* 1000L));
+        loginTicket.setExpired(new Date(System.currentTimeMillis() + expiredSec * 1000L));
         loginTicketMapper.insertLoginTicket(loginTicket);
-        map.put("ticket",loginTicket.getTicket());
+        map.put("ticket", loginTicket.getTicket());
         return map;
     }
 
-    public void logout(String ticket){
-        loginTicketMapper.updateStatus(ticket,1);
+    public void logout(String ticket) {
+        loginTicketMapper.updateStatus(ticket, 1);
+    }
+
+
+    public LoginTicket getLoginTicket(String ticket) {
+        return loginTicketMapper.selectByTicket(ticket);
+    }
+
+    public int updateAvatar(int userId, String avatarUrl) {
+        return userMapper.updateAvatar(userId, avatarUrl);
+    }
+
+
+    public Map<String, Object> updatePassword(int userId, String password, String newPassword) {
+        Map<String, Object> map = new HashMap<>();
+        User user = userMapper.selectById(userId);
+        password = ForumUtil.md5(password + user.getSalt());
+
+        if (!user.getPassword().equals(password)) {
+            map.put("oldPasswordMsg", "Password is incorrect");
+            return map;
+        }
+
+        if (newPassword.length() < 8) {
+            map.put("newPasswordMsg", "Password length must be greater than 8");
+            return map;
+        }
+        if (newPassword.equals(password)) {
+            map.put("newPasswordMsg", "New password cannot be the same as the old password");
+            return map;
+        }
+
+        try {
+            int i = userMapper.updatePassword(userId, ForumUtil.md5(newPassword + user.getSalt()));
+        } catch (Exception e) {
+            map.put("newPasswordMsg", "Password update failed");
+            return map;
+        }
+        return map;
     }
 
 }
