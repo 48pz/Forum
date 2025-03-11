@@ -1,5 +1,6 @@
 package com.flow.forum.controller;
 
+import com.flow.forum.annotation.LoginRequired;
 import com.flow.forum.entity.User;
 import com.flow.forum.service.UserService;
 import com.flow.forum.util.ForumUtil;
@@ -46,11 +47,13 @@ public class UserController {
     @Autowired
     private HostHolder hostHolder;
 
+    @LoginRequired
     @RequestMapping(path = "setting", method = RequestMethod.GET)
     public String getSettingPage() {
         return "/site/setting";
     }
 
+    @LoginRequired
     @RequestMapping(path = "upload", method = RequestMethod.POST)
     public String uploadHeader(MultipartFile avatarImg, Model model) {
         if (avatarImg == null) {
