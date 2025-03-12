@@ -135,7 +135,7 @@
                     </a>
                     <div class="media-body">
                         <h6 class="mt-0 mb-3">
-                            <a href="#" th:utext="${map.post.title}">Prepare for recruitment and practice interview
+                            <a th:href="@{|/discuss/detail/${map.post.id}|}" th:utext="${map.post.title}">Prepare for recruitment and practice interview
                                 questions, get it all done in one month!</a>
                             <span class="badge badge-secondary bg-primary" th:if="${map.post.type==1}">Pin</span>
                             <span class="badge badge-secondary bg-danger" th:if="${map.post.status==1}">Feature</span>
@@ -146,7 +146,7 @@
                             <ul class="d-inline float-right">
                                 <li class="d-inline ml-2">Liked 11</li>
                                 <li class="d-inline ml-2">|</li>
-                                <li class="d-inline ml-2">Reply 7</li>
+                                <li class="d-inline ml-2">Reply <span th:text="${map.post.commentCount}">7</span></li>
                             </ul>
                         </div>
                     </div>
@@ -154,7 +154,7 @@
             </ul>
 
             <!-- pagination -->
-            <nav class="mt-5" th:if="${page.rows>0}">
+            <nav class="mt-5" th:if="${page.rows>0}" th:fragment="pagination">
                 <ul class="pagination justify-content-center">
                     <li class="page-item">
                         <a class="page-link" th:href="@{${page.path}(current=1)}">First</a>
