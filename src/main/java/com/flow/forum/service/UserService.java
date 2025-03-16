@@ -200,4 +200,8 @@ public class UserService implements ForumConstant {
         return map;
     }
 
+    public User findUserByName(String username) {
+        return userMapper.selectByName(username);
+    }
+
 }

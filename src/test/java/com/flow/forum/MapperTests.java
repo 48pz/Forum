@@ -2,9 +2,11 @@ package com.flow.forum;
 
 import com.flow.forum.dao.DiscussPostMapper;
 import com.flow.forum.dao.LoginTicketMapper;
+import com.flow.forum.dao.MessageMapper;
 import com.flow.forum.dao.UserMapper;
 import com.flow.forum.entity.DiscussPost;
 import com.flow.forum.entity.LoginTicket;
+import com.flow.forum.entity.Message;
 import com.flow.forum.entity.User;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,6 +30,10 @@ public class    MapperTests {
 
     @Autowired
     private LoginTicketMapper loginTicketMapper;
+
+
+    @Autowired
+    private MessageMapper messageMapper;
 
 
 
@@ -90,6 +96,30 @@ public class    MapperTests {
         loginTicketMapper.updateStatus("abc", 1);
         loginTicket = loginTicketMapper.selectByTicket("abc");
         System.out.println(loginTicket);
+    }
+
+    @Test
+    public void testSelectDMs(){
+        List<Message> list = messageMapper.selectConversations(111, 0, 20);
+        for (Message message : list){
+            System.out.println(message);
+        }
+
+        int count = messageMapper.selectConversationCount(111);
+        System.out.println(count);
+
+        list = messageMapper.selectDMs("111_112", 0, 10);
+        for (Message message : list){
+            System.out.println(message);
+        }
+
+        count = messageMapper.selectDMCount("111_112");
+        System.out.println(count);
+
+        count = messageMapper.selectUnreadCount(131, "111_131");
+        System.out.println(count);
+
+
     }
 
 }
