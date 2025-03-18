@@ -7,6 +7,7 @@ import com.flow.forum.entity.Page;
 import com.flow.forum.entity.User;
 import com.flow.forum.service.CommentService;
 import com.flow.forum.service.DiscussPostService;
+import com.flow.forum.service.LikeService;
 import com.flow.forum.service.UserService;
 import com.flow.forum.util.ForumConstant;
 import com.flow.forum.util.ForumUtil;
@@ -24,17 +25,20 @@ import java.util.*;
 @Controller
 @RequestMapping("/discuss")
 public class DiscussPostController implements ForumConstant {
-    private final DiscussPostService discussPostService;
-    private final HostHolder hostHolder;
-    private final UserService userService;
-    private final CommentService commentService;
-
-    public DiscussPostController(DiscussPostService discussPostService, HostHolder hostHolder, UserService userService, CommentService commentService) {
+    public DiscussPostController(DiscussPostService discussPostService, HostHolder hostHolder, UserService userService, CommentService commentService, LikeService likeService) {
         this.discussPostService = discussPostService;
         this.hostHolder = hostHolder;
         this.userService = userService;
         this.commentService = commentService;
+        this.likeService = likeService;
     }
+
+    private final DiscussPostService discussPostService;
+    private final HostHolder hostHolder;
+    private final UserService userService;
+    private final CommentService commentService;
+    private final LikeService likeService;
+
 
     @RequestMapping(path = "/add", method = RequestMethod.POST)
     @ResponseBody
@@ -62,6 +66,12 @@ public class DiscussPostController implements ForumConstant {
         User user = userService.findUserById(post.getUserId());
         model.addAttribute("user", user);
 
+        long likeCount = likeService.queryEntityLikeCount(ENTITY_TYPE_POST, discussPostId);
+        model.addAttribute("likeCount", likeCount);
+
+        int likeStatus = hostHolder.getUser() == null ? 0 : likeService.queryEntityLikeStatus(hostHolder.getUser().getId(), ENTITY_TYPE_POST, discussPostId);
+        model.addAttribute("likeStatus", likeStatus);
+
         //search the pagination info of comments
         page.setLimit(5);
         page.setPath("/discuss/detail/" + discussPostId);
@@ -75,7 +85,10 @@ public class DiscussPostController implements ForumConstant {
                 Map<String, Object> commentVo = new HashMap<>();
                 commentVo.put("comment", comment);
                 commentVo.put("user", userService.findUserById(comment.getUserId()));
-
+                likeCount = likeService.queryEntityLikeCount(ENTITY_TYPE_COMMENT, comment.getId());
+                commentVo.put("likeCount", likeCount);
+                likeStatus = hostHolder.getUser() == null ? 0 : likeService.queryEntityLikeStatus(hostHolder.getUser().getId(), ENTITY_TYPE_COMMENT, comment.getId());
+                commentVo.put("likeStatus", likeStatus);
                 //reply list
                 List<Comment> replyList = commentService.findCommentsByEntity(ENTITY_TYPE_COMMENT, comment.getId(), 0, Integer.MAX_VALUE);
                 List<Map<String, Object>> replyVoList = new ArrayList<>();
@@ -86,6 +99,10 @@ public class DiscussPostController implements ForumConstant {
                         replyVo.put("user", userService.findUserById(reply.getUserId()));
                         User target = reply.getTargetId() == 0 ? null : userService.findUserById(reply.getTargetId());
                         replyVo.put("target", target);
+                        likeCount = likeService.queryEntityLikeCount(ENTITY_TYPE_COMMENT, reply.getId());
+                        replyVo.put("likeCount", likeCount);
+                        likeStatus = hostHolder.getUser() == null ? 0 : likeService.queryEntityLikeStatus(hostHolder.getUser().getId(), ENTITY_TYPE_COMMENT, reply.getId());
+                        replyVo.put("likeStatus", likeStatus);
 
                         replyVoList.add(replyVo);
                     }

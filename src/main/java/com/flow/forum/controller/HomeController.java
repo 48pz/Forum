@@ -5,8 +5,9 @@ import com.flow.forum.entity.DiscussPost;
 import com.flow.forum.entity.Page;
 import com.flow.forum.entity.User;
 import com.flow.forum.service.DiscussPostService;
+import com.flow.forum.service.LikeService;
 import com.flow.forum.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.flow.forum.util.ForumConstant;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,12 +19,18 @@ import java.util.List;
 import java.util.Map;
 
 @Controller
-public class HomeController {
-    @Autowired
-    private DiscussPostService discussPostService;
+public class HomeController implements ForumConstant {
 
-    @Autowired
-    private UserService userService;
+    public HomeController(DiscussPostService discussPostService, UserService userService, LikeService likeService) {
+        this.discussPostService = discussPostService;
+        this.userService = userService;
+        this.likeService = likeService;
+    }
+
+    private final DiscussPostService discussPostService;
+    private final UserService userService;
+    private final LikeService likeService;
+
 
     @RequestMapping(path = "/index", method = RequestMethod.GET)
     public String getIndexPage(Model model, Page page) {
@@ -38,12 +45,20 @@ public class HomeController {
                 map.put("post", post);
                 User user = userService.findUserById(post.getUserId());
                 map.put("user", user);
+                long likeCount = likeService.queryEntityLikeCount(ENTITY_TYPE_POST, post.getId());
+                map.put("likeCount", likeCount);
                 discussPosts.add(map);
+
             }
         }
         model.addAttribute("discussPosts", discussPosts);
 
         return "index";
+    }
+
+    @RequestMapping(path = "/errot", method = RequestMethod.GET)
+    public String getErrorPage() {
+        return "error/500";
     }
 
 }

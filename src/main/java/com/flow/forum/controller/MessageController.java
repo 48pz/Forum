@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +40,6 @@ public class MessageController {
     @RequestMapping(path = "/letter/list", method = RequestMethod.GET)
     @LoginRequired
     public String getLetterList(Model model, Page page) {
-        Integer.valueOf("abc");
         User user = hostHolder.getUser();
         page.setLimit(5);
         page.setPath("/letter/list");

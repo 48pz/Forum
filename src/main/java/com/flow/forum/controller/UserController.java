@@ -2,6 +2,7 @@ package com.flow.forum.controller;
 
 import com.flow.forum.annotation.LoginRequired;
 import com.flow.forum.entity.User;
+import com.flow.forum.service.LikeService;
 import com.flow.forum.service.UserService;
 import com.flow.forum.util.ForumUtil;
 import com.flow.forum.util.HostHolder;
@@ -46,6 +47,9 @@ public class UserController {
 
     @Autowired
     private HostHolder hostHolder;
+
+    @Autowired
+    private LikeService likeService;
 
     @LoginRequired
     @RequestMapping(path = "setting", method = RequestMethod.GET)
@@ -118,6 +122,19 @@ public class UserController {
             model.addAttribute("newPasswordMsg", map.get("newPasswordMsg"));
             return "/site/setting";
         }
+    }
+
+    @RequestMapping(path = "/profile/{userId}", method = RequestMethod.GET)
+    public String getProfilePage(@PathVariable("userId") int userId, Model model) {
+        User user = userService.findUserById(userId);
+        if (user == null) {
+            throw new RuntimeException("User does not exist.");
+        }
+        model.addAttribute("user", user);
+
+        int likeCount = likeService.queryUserLikeCount(userId);
+        model.addAttribute("likeCount", likeCount);
+        return "/site/profile";
     }
 
 }
