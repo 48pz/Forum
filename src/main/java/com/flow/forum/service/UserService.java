@@ -7,9 +7,11 @@ import com.flow.forum.entity.User;
 import com.flow.forum.util.ForumConstant;
 import com.flow.forum.util.ForumUtil;
 import com.flow.forum.util.MailClient;
+import com.flow.forum.util.RedisUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -18,6 +20,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class UserService implements ForumConstant {
@@ -30,6 +33,9 @@ public class UserService implements ForumConstant {
     @Autowired
     private TemplateEngine templateEngine;
 
+    @Autowired
+    private RedisTemplate redisTemplate;
+
     @Value("${forum.path.domain}")
     private String domain;
 
@@ -37,12 +43,17 @@ public class UserService implements ForumConstant {
     private String contextPath;
 
     public User findUserById(int id) {
-        return userMapper.selectById(id);
+//        return userMapper.selectById(id);
+        User user = getCache(id);
+        if (user == null) {
+            user = initCache(id);
+        }
+        return user;
     }
 
 
-    @Autowired
-    private LoginTicketMapper loginTicketMapper;
+//    @Autowired
+//    private LoginTicketMapper loginTicketMapper;
 
     public Map<String, Object> register(User user) {
         Map<String, Object> map = new HashMap<>();
@@ -110,6 +121,8 @@ public class UserService implements ForumConstant {
             return ACTIVATION_REPEAT;
         } else if (user.getActivationCode().equals(code)) {
             userMapper.updateStatus(userId, 1);
+            clearCache(userId);
+
             return ACTIVATION_SUCCESS;
         } else {
             return ACTIVATION_FAILURE;
@@ -153,22 +166,34 @@ public class UserService implements ForumConstant {
         loginTicket.setTicket(ForumUtil.generateUUID());
         loginTicket.setStatus(0);
         loginTicket.setExpired(new Date(System.currentTimeMillis() + expiredSec * 1000L));
-        loginTicketMapper.insertLoginTicket(loginTicket);
+//        loginTicketMapper.insertLoginTicket(loginTicket);
+        String redisKey = RedisUtil.getTicketKey(loginTicket.getTicket());
+        redisTemplate.opsForValue().set(redisKey, loginTicket);
         map.put("ticket", loginTicket.getTicket());
         return map;
     }
 
     public void logout(String ticket) {
-        loginTicketMapper.updateStatus(ticket, 1);
+//        loginTicketMapper.updateStatus(ticket, 1);
+        String redisKey = RedisUtil.getTicketKey(ticket);
+        LoginTicket loginTicket = (LoginTicket) redisTemplate.opsForValue().get(redisKey);
+        loginTicket.setStatus(1);
+        redisTemplate.opsForValue().set(redisKey, loginTicket);
     }
 
 
     public LoginTicket getLoginTicket(String ticket) {
-        return loginTicketMapper.selectByTicket(ticket);
+//        return loginTicketMapper.selectByTicket(ticket);
+        String redisKey = RedisUtil.getTicketKey(ticket);
+        return (LoginTicket) redisTemplate.opsForValue().get(redisKey);
     }
 
     public int updateAvatar(int userId, String avatarUrl) {
-        return userMapper.updateAvatar(userId, avatarUrl);
+//        return userMapper.updateAvatar(userId, avatarUrl);
+
+        int rows = userMapper.updateAvatar(userId, avatarUrl);
+        clearCache(userId);
+        return rows;
     }
 
 
@@ -202,6 +227,27 @@ public class UserService implements ForumConstant {
 
     public User findUserByName(String username) {
         return userMapper.selectByName(username);
+    }
+
+    //Prioritize fetching values from cache
+    private User getCache(int userId) {
+        String redisKey = RedisUtil.getUserKey(userId);
+        return (User) redisTemplate.opsForValue().get(redisKey);
+    }
+
+    //If can not get values, initialize the cache data
+    private User initCache(int userId) {
+        User user = userMapper.selectById(userId);
+        String redisKey = RedisUtil.getUserKey(userId);
+        redisTemplate.opsForValue().set(redisKey, user, 3600, TimeUnit.SECONDS);
+        return user;
+    }
+
+
+    //When the data changes, clear the cache data
+    private void clearCache(int userId) {
+        String redisKey = RedisUtil.getUserKey(userId);
+        redisTemplate.delete(redisKey);
     }
 
 }

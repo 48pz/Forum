@@ -2,6 +2,8 @@ package com.flow.forum.controller;
 
 import com.flow.forum.entity.User;
 import com.flow.forum.service.UserService;
+import com.flow.forum.util.ForumUtil;
+import com.flow.forum.util.RedisUtil;
 import com.google.code.kaptcha.Producer;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.Cookie;
@@ -12,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 
 import org.springframework.ui.Model;
@@ -21,6 +24,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static com.flow.forum.util.ForumConstant.*;
 
@@ -37,6 +41,9 @@ public class LoginController {
 
     @Value("${server.servlet.context-path}")
     private String contextPath;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @RequestMapping(path = "/register", method = RequestMethod.GET)
     public String getRegisterPage() {
@@ -85,11 +92,20 @@ public class LoginController {
 
 
     @RequestMapping(path = "/kaptcha", method = RequestMethod.GET)
-    public void getKaptcha(HttpServletResponse response, HttpSession session) {
+    public void getKaptcha(HttpServletResponse response) {
         String text = kaptcharProducer.createText();
         BufferedImage image = kaptcharProducer.createImage(text);
 
-        session.setAttribute("kaptcha", text);
+//        session.setAttribute("kaptcha", text);
+        String kaptchaOwner = ForumUtil.generateUUID();
+        Cookie cookie = new Cookie("kaptchaOwner", kaptchaOwner);
+        cookie.setMaxAge(60);
+        cookie.setPath(contextPath);
+        response.addCookie((cookie));
+        //store kaptcha to redis
+        String redisKey = RedisUtil.getKaptchaKey(kaptchaOwner);
+        redisTemplate.opsForValue().set(redisKey, text, 60, TimeUnit.SECONDS);
+
         response.setContentType("image/png");
         try {
             ServletOutputStream outputStream = response.getOutputStream();
@@ -100,8 +116,14 @@ public class LoginController {
     }
 
     @RequestMapping(path = "/login", method = RequestMethod.POST)
-    public String login(String username, String password, String code, boolean rememberMe, Model model, HttpSession session, HttpServletResponse response) {
-        String kaptcha = (String) session.getAttribute("kaptcha");
+    public String login(String username, String password, String code, boolean rememberMe, Model model, HttpServletResponse response, @CookieValue(value = "kaptchaOwner") String kaptchaOwner) {
+//        String kaptcha = (String) session.getAttribute("kaptcha");
+        String kaptcha = null;
+        if (StringUtils.isNotBlank(kaptchaOwner)) {
+            String redisKey = RedisUtil.getKaptchaKey(kaptchaOwner);
+            kaptcha = (String) redisTemplate.opsForValue().get(redisKey);
+        }
+
         if (StringUtils.isBlank(kaptcha) || StringUtils.isBlank(code) || !kaptcha.equalsIgnoreCase(code)) {
             model.addAttribute("codeMsg", "Verification code is incorrect");
             return "site/login";
@@ -109,21 +131,21 @@ public class LoginController {
 
         int expiredSec = rememberMe ? REMEMBER_EXPIRED_SECONDS : DEFAULT_EXPIRED_SECONDS;
         Map<String, Object> map = userService.login(username, password, expiredSec);
-        if(map.containsKey("ticket")){
-            Cookie cookie = new Cookie("ticket",map.get("ticket").toString());
+        if (map.containsKey("ticket")) {
+            Cookie cookie = new Cookie("ticket", map.get("ticket").toString());
             cookie.setPath(contextPath);
             cookie.setMaxAge(expiredSec);
             response.addCookie(cookie);
             return "redirect:/index";
-        }else{
+        } else {
             model.addAttribute("usernameMsg", map.get("usernameMsg"));
             model.addAttribute("passwordMsg", map.get("passwordMsg"));
             return "site/login";
         }
     }
 
-    @RequestMapping(path="/logout", method = RequestMethod.GET)
-    public String logout(@CookieValue("ticket") String ticket){
+    @RequestMapping(path = "/logout", method = RequestMethod.GET)
+    public String logout(@CookieValue("ticket") String ticket) {
         userService.logout(ticket);
         return "redirect:/login";
     }

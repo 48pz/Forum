@@ -2,8 +2,10 @@ package com.flow.forum.controller;
 
 import com.flow.forum.annotation.LoginRequired;
 import com.flow.forum.entity.User;
+import com.flow.forum.service.FollowService;
 import com.flow.forum.service.LikeService;
 import com.flow.forum.service.UserService;
+import com.flow.forum.util.ForumConstant;
 import com.flow.forum.util.ForumUtil;
 import com.flow.forum.util.HostHolder;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,7 +31,7 @@ import java.util.Map;
 
 @Controller
 @RequestMapping("/user")
-public class UserController {
+public class UserController implements ForumConstant {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
@@ -50,6 +52,9 @@ public class UserController {
 
     @Autowired
     private LikeService likeService;
+
+    @Autowired
+    private FollowService followService;
 
     @LoginRequired
     @RequestMapping(path = "setting", method = RequestMethod.GET)
@@ -134,6 +139,22 @@ public class UserController {
 
         int likeCount = likeService.queryUserLikeCount(userId);
         model.addAttribute("likeCount", likeCount);
+
+        //following
+        long followeeCount = followService.findFolloweeCount(userId, ENTITY_TYPE_USER);
+        model.addAttribute("followeeCount", followeeCount);
+
+        //follower
+        long followerCount = followService.findFollowerCount(ENTITY_TYPE_USER, userId);
+        model.addAttribute("followerCount", followerCount);
+
+        //has followed
+        boolean hasFollowed = false;
+        if (hostHolder.getUser() != null) {
+            hasFollowed = followService.hasFollowed(hostHolder.getUser().getId(), ENTITY_TYPE_USER, userId);
+        }
+        model.addAttribute("hasFollowed", hasFollowed);
+
         return "/site/profile";
     }
 
